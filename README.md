@@ -1,2 +1,1 @@
-Pico8a Repository
-Second repository of Pico8 experiments
+Second repository of Pico8 experiments and demos
