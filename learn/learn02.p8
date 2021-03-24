@@ -2,22 +2,48 @@ pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
 
-rclr = 0
-rx = 0
-ry = 0
+-- learn how to do arrays of objects
+
+function new_blox(x, y)
+   local blox = {}
+   blox.x = x%128
+   blox.y = y%128
+   blox.v = flr(rnd(3)) + 1
+   blox.c = flr(rnd(16))
+   blox.draw = function(this)
+       pset(this.x, this.y, this.c)
+       end
+   blox.update = function(this)
+       --this.x += this.v
+       this.x += flr(rnd(5))
+       if this.x >= 128 then this.x = 1 end
+       end
+   return blox
+end
+
+
+blox_array = {}
+x = 1
 
 function _init()
    cls()
+   for n=1,60 do
+       add(blox_array, new_blox(n*2, n*2))
+   end
+   -- printh("init", "learn02")
 end
 
 function _update() 
-   rclr = flr(rnd(16))
-   rx = flr(rnd(128))
-   ry = flr(rnd(128))
+    for obj in all(blox_array) do
+       obj.update(obj)
+    end
 end
 
 function _draw()
-   pset(rx, ry, rclr)
+    cls()
+    for obj in all(blox_array) do
+       obj.draw(obj)
+    end
 end
 
 __gfx__
