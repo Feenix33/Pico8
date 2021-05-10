@@ -17,64 +17,74 @@ __lua__
 -- 8=red    9=orange   10=yellow  11=lgreen
 -- 12=lblue 13=mgrey   14=pink    15=peach
 --
+-- todo
+-- x initialize car independent on start 
+-- pathfinding instead of random movement
+-- move more than 1 space per movement
+-- stop and refuel in dead end
+-- random roads
 
 --
--- Train class
+-- Globals
 cars = {}
 mvxy={r={1,0},l={-1,0},u={0,-1},d={0,1}}
-turnr={r='d',d='l',l='u',u='r'}
-turnl={r='u',d='r',l='d',u='l'}
-gspds={10,5,2}
+gspds={2, 5, 1} -- update speeds
+gspd=1 -- current update speed (index)
+gdlay=0 -- delay counter for the speed control
+debug=false -- print the debug messages
+gfree=false -- free run true or pause false
+gcarbase=57 --41 -- first sprint for car
 
--- Gobals
-debug=false
-gfree=false
-gdlay=0
-gspd=1
-
+-- decision tree; dim1=current direction dim2 tile index; value=output direction
 dtree={
-    r={'l','2','3','4','5','d','u','8','trd','tud','tru','12','r','14','tudr'},
-    l={'1','2','r','4','d','6','7','u','tld','10','tlu','tud','l','14','tudl'},
-    u={'1','2','3','d','r','l','7','8','tlr','tul','11','tur','13','u','tulr'},
-    d={'1','u','3','4','d','6','l','r','9','tdl','trl','tdr','13','d','tdlr'},
+    r={'l','2','r','4','r','d','u','8','trd','tud','tru','r','r','14','tudr'},
+    l={'1','2','r','4','d','6','7','u','tld','l','tlu','tud','l','14','tudl'},
+    u={'1','2','3','d','r','l','7','8','tlr','tul','u','tur','13','u','tulr'},
+    d={'1','u','3','4','d','6','l','r','d','tdl','trl','tdr','13','d','tdlr'},
 }
---[[
-chktree={
-    r={ 0,-1,-1,-1,-1,  0, 0,-1, 0, 0,  0,-1, 0,-1, 0},
-    l={-1,-1, 0,-1, 0, -1,-1, 0, 0,-1,  0, 0, 0,-1, 0},
-    u={-1,-1,-1, 0, 0,  0,-1,-1, 0, 0, -1, 0,-1, 0, 0},
-    d={-1, 0,-1,-1, 0, -1, 0, 0,-1, 0,  0, 0,-1, 0, 0},
-}
-]]--
+-- initial direction
+--  01 02 03 04 05 06 07 08 09 10 11 12 13 14 15
+--  >  V  <  ^  +- -+ _+ +_ T -|  _|_|- --  |  +
+--       1   2   3   4   5   6   7   8   9  10  11  12  13  14  15
+ginitd={'r','d','r','u','r','r','d','u','d','u','r','l','r','u','d'}
 
 function add_new_car(_x,_y)
     add(cars, {
+        base_spr=57,
+        dirspr={r=0,d=1,l=2,u=3},
         id=#cars+1,
         x=_x*8+2,
         y=_y*8+2,
         d='d', -- direction
         cnt=0,  -- turn countr
-        ontile = mget(_x,_y),
+        onspr=0, --mget(_x,_y),
         draw=function(self)
-            rect(self.x, self.y, self.x+3, self.y+3, 15)
+            --spr(gcarbase+dirspr[self.d], self.x-2, self.y-2)
+            --spr(gcarbase+dirspr[self.d], self.x, self.y)
+            spr(self.base_spr+self.dirspr[self.d], self.x, self.y)
+            --rect(self.x, self.y, self.x+3, self.y+3, 15)
         end,
         dump=function(self)
-            printh("id="..self.id.." xy= "..self.x..","..self.y.." d="..self.d)
+            printh("id="..self.id.." xy= "
+                ..self.x..","..self.y
+                .." dir="..self.d
+                .." on="..self.onspr
+                .." cnt="..self.cnt
+                )
+        end,
+        reinit=function(self)
+            self.onspr=mget(self.x/8,self.y/8) % 100
+            self.d = ginitd[self.onspr]
+            --printh(self.onspr ..' '..self.d ..' '..ginitd[self.onspr])
         end,
         mvf=function(self)
             self.x+=mvxy[self.d][1]
             self.y+=mvxy[self.d][2]
             self.cnt=(self.cnt+1)%8
         end,
-        mvr=function(self)
-            self.d = turnr[self.d]
-        end,
-        mvl=function(self)
-            self.d = turnl[self.d]
-        end,
         mv=function(self)
             if self.cnt == 0 then
-                self.ontile=mget(cars[1].x/8,cars[1].y/8)
+                self.onspr=mget(cars[1].x/8,cars[1].y/8)
                 new_dir = self.decide(self)
                 if #new_dir == 1 then
                     self.d = new_dir
@@ -90,9 +100,8 @@ function add_new_car(_x,_y)
         end,
         decide=function(self)
             local d = self.d
-            local t = self.ontile % 100
+            local t = self.onspr % 100
             local val = dtree[d][t]
-            --chktree[d][t] += 1
             if debug then printh ("decide[d="..d.."][t="..t.."] = "..val) end
             return val
         end,
@@ -129,33 +138,107 @@ function draw_grid(clr)
     end
 end
 
+function map_line(m, bgn, fin) -- connect the two points begin & finish
+    -- do x 
+    printh('line between '..bgn[1]..','..bgn[2]
+        ..' & '..fin[1]..','..fin[2])
+    x1 = bgn[1]
+    x2 = fin[1]
+    y1 = bgn[2]
+    y2 = fin[2]
+    if x1 > x2 then
+        x1,x2 = x2,x1
+    end
+    for x=x1,x2 do
+        m[x][y1] += 1
+    end
+    if y1 > y2 then
+        y1,y2 = y2,y1
+    end
+    for y=y1,y2 do
+        m[x2][y] += 1
+    end
+end
+
+function build_a_map()
+    printh ("Build a map")
+    local m = {
+        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+
+        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+    }
+    city = {}
+
+    for n=1,4 do
+        y=flr(rnd(16))+1
+        x=flr(rnd( 8))+1
+        m[x][y] = 1
+        city[n] = {x,y}
+    end
+    -- put roads between the cities
+    for s=1,4 do
+        for e=s+1,4 do
+            map_line(m, city[s], city[e])
+        end
+    end
+    printh ("========================================================")
+    prt_table(m)
+
+end
+
+function prt_table(tbl, div)
+    div = div or " "
+    for n=1,#tbl do
+        printh ('R'..n..":  "..fmt_row(tbl[n], "|"))
+    end
+end
+function fmt_row(row, div) -- format a row for printing
+    str = ""
+    div = div or " "
+    for n=1,#row do
+        str = str..w3(row[n])..div
+    end
+    return str
+end
+
+function w3(n) -- format the number to width three
+    local spc
+    if n<10 then
+        spc = "  "
+    elseif n < 100 then
+        spc = " "
+    else
+        spc = ""
+    end
+    return spc..tostr(n)
+end
+
 --
 -- base functions
 -- 
 
 function _init()
     -- print a runtime note
-    printh (stat(93)..":"..stat(94).." ---------------------------------------- ")
+    local div,m
+    m=stat(94)
+    if m < 10 then div=":0" else div=":" end
+    printh (stat(93)..div..stat(94).." ---------------------------------------- ")
+
     -- build the map at init time
-    --[[
-    mset( 1, 0, 105)
-    mset( 2, 0, 113)
-    mset( 3, 0, 113)
-    mset( 4, 0, 106)
-    mset( 1, 1, 114)
-    mset( 4, 1, 114)
-    mset( 1, 2, 108)
-    mset( 2, 2, 113)
-    mset( 3, 2, 113)
-    mset( 4, 2, 107)
-    ]]--
+    build_a_map()
     --  +- -+- -+  > v   05 09 06 01 02
     --  |- -+- -|  < ^   12 15 10 03 04
     --  +_ _+_ _+  - |   08 11 07 13 14
     local tiles = {{105, 113, 109, 113, 106,   0},
-                   {114, 104, 114,   0, 112, 101},
-                   {112, 111, 115, 113, 110,   0},
-                   {114,   0, 114, 103, 110,   0},
+                   {114, 104, 114, 104, 112, 101},
+                   {112, 111, 115, 111, 110,   0},
+                   {112, 101, 114, 103, 115, 101},
                    {108, 109, 111, 113, 107,   0},
                    {  0, 102,   0,   0,   0,   0},
                }
@@ -173,7 +256,24 @@ function _init()
             end
         end
     end
-    add_new_car(1,0)
+
+    local found=false
+    while not found do
+        x = flr(rnd(16))
+        y = flr(rnd(16))
+        if mget(x, y) > 0 then
+            add_new_car(x,y)
+            found = true
+        end
+    end
+
+    --add_new_car(1,1)
+    for c in all(cars) do -- set the direction and other params
+        c:reinit()
+    end
+    for c in all(cars) do
+        c:dump()
+    end
 end
 
 function _update()
@@ -207,19 +307,6 @@ function _update()
         for c in all(cars) do
             c:dump()
         end
-        --[[
-        for d in all({'r','l','u','d'}) do
-            for n=0,10,5 do
-                printh('chk['..d..']['..(n+1)..']= '..
-                       chktree[d][n+1]..' '..
-                       chktree[d][n+2]..' '..
-                       chktree[d][n+3]..' '..
-                       chktree[d][n+4]..' '..
-                       chktree[d][n+5])
-            end
-        end
-        ]]--
-
     end
 
     if gfree then
@@ -263,16 +350,16 @@ __gfx__
 00000000000000000000000000000000006666000066660000666600000000000000000000666600006666000000000000666600000000000066660000666600
 0000000000000000008778000000000000a77a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000077770000000000007777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000008777cc7a00777700a7cc777800cccc0000aab00000aaaa00000baa00000bb00000000000000000000000000000000000000000000000000000000000
-0000000077777c770077770077c7777700c77c0000aaab0000aaaa0000baaa0000baab0000000000000000000000000000000000000000000000000000000000
-0000000077777c7700c77c0077c777770077770000aaab0000baab0000baaa0000aaaa0000000000000000000000000000000000000000000000000000000000
-000000008777cc7a00cccc00a7cc77780077770000aab000000bb000000baa0000aaaa0000000000000000000000000000000000000000000000000000000000
+000000008777cc7a00777700a7cc777800cccc0000aab00000aaaa00000baa00000bb00000e77a0000e77e0000a77e0000a77a00000000000000000000000000
+0000000077777c770077770077c7777700c77c0000aaab0000aaaa0000baaa0000baab000077c70000777700007c7700007cc700000000000000000000000000
+0000000077777c7700c77c0077c777770077770000aaab0000baab0000baaa0000aaaa000077c700007cc700007c770000777700000000000000000000000000
+000000008777cc7a00cccc00a7cc77780077770000aab000000bb000000baa0000aaaa0000e77a0000a77a0000a77e0000e77e00000000000000000000000000
 00000000000000000077770000000000007777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000a77a0000000000008778000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000e77a0000e77e0000a77e0000a77a0000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000077c70000777700007c7700007cc70000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000077c700007cc700007c77000077770000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000e77a0000a77a0000a77e0000e77e0000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
