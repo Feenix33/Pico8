@@ -13,12 +13,13 @@ __lua__
 -- globals
 -- blocks
 -- m=margin w=width h=height n=count c=color
-gblk={m=6, w=24, h=16,n=4, c=5}
+gblk={m=6, w=24, h=66,n=4, c=5}
 est={empty=1,fill=2}
 --estate={mv=1,add=2,del=3,car=4,sz=4}
 
 gdex = 1
-pour_amount = 10
+pour_amount = 2
+delay=0
 
 gn=1
 tanks={}
@@ -26,7 +27,7 @@ tanks={}
 function add_tank()
     add(tanks, {
         id=#tanks+1,
-        cap=0, --capacity for filling
+        cap=20, --capacity for filling
         st=est.empty,
         dump=function(self)
             printh(self.id.." = "..self.x1.." "..self.x2.." "..self.y1.." "..self.y2)
@@ -56,6 +57,9 @@ function add_tank()
             rect(self.x1, self.y1, self.x2,self.y2,gblk.c)
         end,
         pour=function(self)
+            self.cap = min(self.cap+pour_amount, 100)
+        end,
+        oldpour=function(self)
             if self.cap < 100 then
                 self.cap += pour_amount
             end
@@ -64,7 +68,6 @@ function add_tank()
                 return true
             end
             return false
-            --printh("poured["..self.id.."]= "..self.cap)
         end,
         is_full=function(self)
             return self.cap >= 100
@@ -72,15 +75,10 @@ function add_tank()
         fill=function(self)
             self.st=est.fill
         end,
-        flip=function(self)
-            if (self.st==est.fill) then 
-                self.st=est.empty 
-            else 
-                self.st=est.fill
-            end
-        end,
-        input=function(self)
-        end,
+        drain=function(self,amt)
+            amt = amt or 10
+            self.cap = max(self.cap-amt, 0)
+        end
     })
 end
 
@@ -102,11 +100,26 @@ function _init()
 end
 
 function _update()
+    delay += 1
+    if (delay % 10)==0 then
+        tanks[gdex]:pour()
+        if tanks[gdex]:is_full() then
+            gdex = (gdex % #tanks) + 1
+        end
+    end
+    if (delay % 20)==0 then
+        n =flr(rnd(gblk.n)) + 1
+        amt=flr(rnd(10))+1
+        tanks[n]:drain(amt)
+    end
+
     if btnp(4) then
+        --[[
         if tanks[gdex]:pour() then
             gdex = (gdex % #tanks) + 1
             printh("gdex="..gdex)
         end
+        ]]--
 
     elseif btnp(5) then
         printh("Btn 5")

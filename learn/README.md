@@ -11,5 +11,6 @@ Programs for learning; no real projects
 |roady07.p8 | Lay out roads a car that moves but only turns right; demonstrates a class like lua construct |
 | frag08.p8 | First attempt at a defrag simulation to play w/reactive layout and eventually class like constructs |
 | frag09.p8 | Second attempt. Working one color. Abandoned |
+| stepr10.p8 | Fill/drain buckets on a timer |
 
 
