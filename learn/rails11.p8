@@ -19,21 +19,22 @@ __lua__
 --
 -- todo
 -- x initialize car independent on start 
--- pathfinding instead of random movement
--- move more than 1 space per movement
--- stop and refuel in dead end
--- random roads
+-- o pathfinding instead of random movement
+-- o move more than 1 space per movement
+-- x stop and refuel in dead end
+-- o random roads - make a separate project
 
 --
 -- Globals
 cars = {}
 mvxy={r={1,0},l={-1,0},u={0,-1},d={0,1}}
-gspds={2, 5, 1} -- update speeds
-gspd=1 -- current update speed (index)
-gdlay=0 -- delay counter for the speed control
+-- gspds={2, 5, 1} -- update speeds
+-- gspd=1 -- current update speed (index)
+-- gdlay=0 -- delay counter for the speed control
 debug=false -- print the debug messages
-gfree=false -- free run true or pause false
+-- gfree=false -- free run true or pause false
 gcarbase=57 --41 -- first sprint for car
+gwait=2 -- master wait delay
 
 -- decision tree; dim1=current direction dim2 tile index; value=output direction
 dtree={
@@ -57,6 +58,7 @@ function add_new_car(_x,_y)
         y=_y*8+2,
         d='d', -- direction
         cnt=0,  -- turn countr
+        wait=0, -- wait counter
         onspr=0, --mget(_x,_y),
         draw=function(self)
             --spr(gcarbase+dirspr[self.d], self.x-2, self.y-2)
@@ -83,6 +85,11 @@ function add_new_car(_x,_y)
             self.cnt=(self.cnt+1)%8
         end,
         mv=function(self)
+            if self.wait > 0 then
+                self.wait -= 1
+                return
+            end
+            -- if here, then wait counter == 0
             if self.cnt == 0 then
                 self.onspr=mget(cars[1].x/8,cars[1].y/8)
                 new_dir = self.decide(self)
@@ -94,6 +101,12 @@ function add_new_car(_x,_y)
                     r = flr(rnd(#new_dir-1)) + 2
                     self.d = sub(new_dir,r,r)
                     if debug then printh('self.d= '..self.d..  ' new_dir= '..new_dir..  " alt="..sub(new_dir,r,r)) end
+                end
+                -- this is the delay setting
+                if self.onspr >= 101 and self.onspr <= 104 then
+                    self.wait = 20 -- hardcoded for test
+                else
+                    self.wait = gwait -- master wait delay
                 end
             end
             self.mvf(self)
@@ -138,59 +151,6 @@ function draw_grid(clr)
     end
 end
 
-function map_line(m, bgn, fin) -- connect the two points begin & finish
-    -- do x 
-    printh('line between '..bgn[1]..','..bgn[2]
-        ..' & '..fin[1]..','..fin[2])
-    x1 = bgn[1]
-    x2 = fin[1]
-    y1 = bgn[2]
-    y2 = fin[2]
-    if x1 > x2 then
-        x1,x2 = x2,x1
-    end
-    for x=x1,x2 do
-        m[x][y1] += 1
-    end
-    if y1 > y2 then
-        y1,y2 = y2,y1
-    end
-    for y=y1,y2 do
-        m[x2][y] += 1
-    end
-end
-
-function build_a_map()
-    printh ("Build a map")
-    local m = {
-        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-
-        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-    }
-    city = {}
-
-    for n=1,4 do
-        y=flr(rnd(16))+1
-        x=flr(rnd( 8))+1
-        m[x][y] = 1
-        city[n] = {x,y}
-    end
-    -- put roads between the cities
-    for s=1,4 do
-        for e=s+1,4 do
-            map_line(m, city[s], city[e])
-        end
-    end
-    printh ("========================================================")
-    prt_table(m)
-
-end
 
 function prt_table(tbl, div)
     div = div or " "
@@ -231,7 +191,6 @@ function _init()
     printh (stat(93)..div..stat(94).." ---------------------------------------- ")
 
     -- build the map at init time
-    build_a_map()
     --  +- -+- -+  > v   05 09 06 01 02
     --  |- -+- -|  < ^   12 15 10 03 04
     --  +_ _+_ _+  - |   08 11 07 13 14
@@ -240,7 +199,13 @@ function _init()
                    {112, 111, 115, 111, 110,   0},
                    {112, 101, 114, 103, 115, 101},
                    {108, 109, 111, 113, 107,   0},
-                   {  0, 102,   0,   0,   0,   0},
+                   {  0, 114,   0,   0,   0,   0},
+                   {  0, 114,   0,   0,   0,   0},
+                   {  0, 114,   0,   0,   0,   0},
+                   {105, 111, 113, 113, 113, 106},
+                   {114,   0,   0,   0,   0, 114},
+                   {114,   0,   0,   0,   0, 114},
+                   {108, 113, 113, 113, 113, 107},
                }
     local y=-1
     local x=0
@@ -280,12 +245,14 @@ function _update()
 
     if btnp(0) then
         --printh("Btn 0 left")
-        gfree=false
+        --gfree=false
+        gwait = max(flr(gwait/2), 1) -- master wait delay
 
     elseif btnp(1) then
         --printh("Btn 1 right")
-        if (gfree) then gspd = (gspd % #gspds) + 1 end
-        gfree=true
+        --if (gfree) then gspd = (gspd % #gspds) + 1 end
+        --gfree=true
+        gwait = min(gwait*2, 8) -- master wait delay
 
     elseif btnp(2) then --printh("Btn 2")
         for c in all(cars) do
@@ -309,6 +276,7 @@ function _update()
         end
     end
 
+    --[[
     if gfree then
         gdlay -= 1
         if gdlay <= 0 then
@@ -317,6 +285,11 @@ function _update()
                 c:mv()
             end
         end
+    end
+    ]]--
+    -- always move when not using the gfree construct
+    for c in all(cars) do
+        c:mv()
     end
 end
 
