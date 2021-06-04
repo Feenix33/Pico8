@@ -24,7 +24,19 @@ __lua__
 -- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
 floor = {}
 dude = {}
+box = {}
 dir={l=1,r=2,d=3,u=4}
+
+function add_new_box(_x,_y)
+    add(box, {
+        base_spr=4,
+        x=_x,
+        y=_y,
+        draw=function(self)
+            spr(self.base_spr, self.x*8, self.y*8)
+        end,
+    })
+end
 
 
 
@@ -32,35 +44,88 @@ dir={l=1,r=2,d=3,u=4}
 -- Generics
 -- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
 
-function isfree(x,y)
-    printh("coord "..x.." "..y.." = "..floor[y][x])
+function mv(dx, dy) -- pass the delta x,y for the dude
+    -- set target positions
+    tgtx = dude.x + dx
+    tgty = dude.y + dy
+    boxmoved = true -- pretend invisible box moved, will check if real box exists
+    --printh("dude at "..dude.x.." "..dude.y.." tgt is "..tgtx.." "..tgty)
+    -- first check for box moves
+    if isboxat(tgtx, tgty) then
+        -- there is a box here, check if there is a box in the next slot
+        if isboxat(tgtx+dx, tgty+dy) then
+            -- yes, can't move the box
+            boxmoved = false
+        else -- no
+            --printh("try move the box")
+            -- need to have no wall to move
+            if iswhfree(tgtx+dx, tgty+dy) then
+                -- no wall, move the box
+                mvbox(tgtx,tgty, tgtx+dx, tgty+dy)
+            else
+                -- there is a wall, can't move the box
+                boxmoved = false
+            end
+        end
+    end
+    -- check if no wall and that if there was a box that it moved
+    if iswhfree(tgtx,tgty) and boxmoved then
+        dude.x = tgtx
+        dude.y = tgty
+        return true
+    end
+    return false
+end
+
+-- move a box starting at the 'at' position to the 'to' position
+function mvbox(atx, aty, tox, toy)
+    for b in all(box) do
+        if b.x==atx and b.y==aty then
+            b.x = tox
+            b.y = toy
+            return
+        end
+    end
+end
+
+-- check if there is a box at xy
+function isboxat(x,y)
+    for b in all(box) do
+        if b.x==x and b.y==y then
+            return true
+        end
+    end
+    return false
+end
+
+-- check if the warehouse is free at xy
+function iswhfree(x,y)
+    -- check if the warehouse floor is free
     if floor[y][x] == 81 then
         return true
     end
     return false
 end
 
+-- see if the space is free to move
+function isfree(x,y)
+    if isboxat(x,y) then return false end
+    return iswhfree(x,y)
+end
+
 function move(d)
     if d==dir.l then
-        if isfree(dude.x-1, dude.y) then
-            dude.x -=1
-        end
+        mv (-1, 0)
     elseif d==dir.r then
-        if isfree(dude.x+1, dude.y) then
-            dude.x +=1
-        end
+        mv (1, 0)
     elseif d==dir.u then
-        if isfree(dude.x, dude.y-1) then
-            dude.y -=1
-        end
+        mv (0, -1)
     elseif d==dir.d then
-        if isfree(dude.x, dude.y+1) then
-            dude.y +=1
-        end
+        mv (0, 1)
     else
         printh("Error unknown direction")
     end
-    printh("dude at "..dude.x.." "..dude.y)
+    --printh("dude at "..dude.x.." "..dude.y)
 end
 
 -- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
@@ -74,20 +139,23 @@ function _init()
     dude.y=-1
     m=stat(94)
     if m < 10 then div=":0" else div=":" end
-    printh (stat(93)..div..stat(94).." ---------------------------------------- ")
+    --printh (stat(93)..div..stat(94).." ---------------------------------------- ")
     -- init the floor
     local f = {
-        "wwwwwwwwwwwwwwww", 
-        "w          x   w", 
-        "w              w", 
-        "wvvvvo  x      w", 
-        "w              w", 
-        "w              w", 
-        "wwwwwwwwwwwwwwww", 
+        "wwwwwwwwwwwwww", 
+        "w        x   w", 
+        "w            w", 
+        "wvvvvo  xx   w", 
+        "w   v        w", 
+        "w   v  vvv   w", 
+        "w    xx  x   w", 
+        "w            w", 
+        "wwwwwwwwwwwwww", 
     }
+    --   1234567890123456
     for r=1,#f do
         row= {}
-        for c=1,16 do
+        for c=1,14 do
             tok=sub(f[r],c,c)
             if tok == 'w' then
                 nspr=84
@@ -97,10 +165,12 @@ function _init()
                 nspr= 85
             elseif tok=="x" then
                 nspr= 2
+                nspr= 81
+                add_new_box(c,r)
             elseif tok=="o" then
-                dude.x = c-1
-                dude.y = r-1
-                printh("dude at "..dude.x.." "..dude.y)
+                dude.x = c
+                dude.y = r
+                --printh("dude at "..dude.x.." "..dude.y)
                 --nspr= 53
                 nspr= 81
             end
@@ -129,7 +199,7 @@ function _update()
         move(dir.d)
 
     elseif btnp(4) then
-        printh("Btn 4")
+        printh("button 4")
 
     elseif btnp(5) then
         printh("button 5")
@@ -148,14 +218,17 @@ function _draw()
         end
     end
     ]]--
-    y=0
+    y=8
     for r=1,#floor do
-        x=0
+        x=8
         for c=1,#floor[r] do
             spr(floor[r][c],x,y)
             x+=8
         end
         y+=8
+    end
+    for b in all(box) do
+        b:draw()
     end
     spr(53,dude.x*8,dude.y*8)
 end
