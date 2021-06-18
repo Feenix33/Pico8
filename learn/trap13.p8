@@ -31,9 +31,7 @@ __lua__
 -- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
 floor = {}
 dude = {}
-box = {}
-bogie = {}
-img = {box=3,box2=4,rbog=121,lbog=122,w=84, w2=85,f=81,dude=55}
+img = {box=3,box2=4,rbog=166,lbog=135,w=84, w2=85,f=81,dude=55}
 dir={l=1,r=2,d=3,u=4}
 
 ents = {}
@@ -47,39 +45,8 @@ function add_entity(_n,_x,_y,_s,_dump,_draw)
             printh(self.n.."  @"..self.x..", "..self.y.."  s"..self.s)
         end,
         draw = _draw or function(self)
-            spr(s, self.x*8, self.y*8)
+            spr(self.s, self.x*8, self.y*8)
         end,
-    })
-end
-
-function add_new_box(_x,_y)
-    add(box, {
-        x=_x,
-        y=_y,
-        draw=function(self)
-            spr(img.box, self.x*8, self.y*8)
-        end,
-        dump=function(self)
-            printh("box     "..self.x..", "..self.y)
-        end
-    })
-end
-
-function add_bogie(_x,_y,_tr)
-    -- tr = type right, if false then it is type left
-    add(bogie, {
-        x=_x,
-        y=_y,
-        tr=_tr,
-        draw=function(self)
-            local i
-            if self.tr==true then i=img.rbog else i=img.lbog end
-            spr(i, self.x*8, self.y*8)
-            --spr(img.rbog , self.x*8, self.y*8)
-        end,
-        dump=function(self)
-            printh("bogie   "..self.x..", "..self.y)
-        end
     })
 end
 
@@ -143,14 +110,17 @@ function init_game()
             tok=sub(f[r],c,c)
             nspr = ch2s[ord(tok)]
             if nspr == img.box then
-                add_new_box(c,r)
+                add_entity("box",c,r,img.box,nil,nil)
                 nspr=img.f
                 --printh("added box at ")
             elseif nspr == img.lbog then
-                add_bogie(c,r,false)
+                --add_bogie(c,r,false)
+                add_entity("bog l",c,r,img.lbog,nil,nil)
                 nspr=img.f
             elseif nspr == img.rbog then
-                add_bogie(c,r,true)
+                --add_bogie(c,r,true)
+                add_entity("bog r",c,r,img.rbog,nil,nil)
+                nspr=img.f
                 nspr=img.f
             elseif nspr == img.dude then
                 add_dude(c,r,true)
@@ -200,10 +170,6 @@ function _init()
     --
     -- initialize the game
     init_game()
-    --add_entity("duff", 3, 4, 101)
-    --function add_entity(_n,_x,_y,_s,_dump)
-    add_entity("dumpr", 4, 5, 102, hello)
-    add_entity("rrrpr", 7, 1, 202)
 end
 
 function _update()
@@ -223,17 +189,11 @@ function _update()
     elseif btnp(4) then
         --printh("button 4")
         printh("big dump --------------")
-        for b in all(box) do
-            b:dump()
-        end
-        for b in all(bogie) do
-            b:dump()
-        end
         for b in all(dude) do
             b:dump()
         end
         for e in all(ents) do
-            printh ("calling an ent:dump()")
+            --printh ("calling an ent:dump()")
             e:dump()
         end
 
@@ -245,6 +205,8 @@ end
 function _draw()
     cls()
     rect(0, 0, 127, 127, 6)
+    --[[
+    ]]--
     y=8
     for r=1,#floor do
         x=8
@@ -254,14 +216,17 @@ function _draw()
         end
         y+=8
     end
-    for b in all(box) do
-        b:draw()
-    end
-    for b in all(bogie) do
-        b:draw()
-    end
+    --for b in all(box) do
+    --    b:draw()
+    --end
+    --for b in all(bogie) do
+    --    b:draw()
+    --end
     for b in all(dude) do
         b:draw()
+    end
+    for e in all(ents) do
+        e:draw()
     end
 end
 
