@@ -4,6 +4,7 @@ __lua__
 -- trap.p8
 -- Warehouse series
 -- enemy moves around the warehouse, try to trap w/boxes
+-- entity system developed
 -- 
 -- world is in simple xy grid coordinates
 -- drawing translates from xy to screen coordinates
