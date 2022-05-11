@@ -14,6 +14,8 @@ _ctrl={
 }
 
 _wrld={
+  wx=0,
+  wy=0,
   state=nil,
   init=function(self)
     for x=0,25 do
@@ -29,7 +31,7 @@ _wrld={
   update=function(self)
   end,
   draw=function(self)
-    map(0,0,0,0,16,16)
+    map(0, 0, self.wx,self.wy,16,16)
   end,
 }
 
@@ -51,7 +53,8 @@ function _update() --uuuuuuuu
     printh("Btn 0 left")
 
   elseif btnp(1) then
-    printh("Btn 1 right")
+    -- printh("Btn 1 right")
+    _wrld.wx -= 1
 
   elseif btnp(2) then 
     printh("Btn 2 up")
@@ -60,7 +63,8 @@ function _update() --uuuuuuuu
     printh("Btn 3 down")
 
   elseif btnp(4) then
-    printh("Btn 4 = cv")
+    -- printh("Btn 4 = cvz")
+    printh('wx='.._wrld.wx..' wy='.._wrld.wy)
 
   elseif btnp(5) then
     printh("Btn 5 = nm")
