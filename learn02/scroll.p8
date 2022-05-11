@@ -32,6 +32,7 @@ _wrld={
   end,
   draw=function(self)
     map(0, 0, self.wx,self.wy,16,16)
+    -- need to add the second draw
   end,
 }
 
