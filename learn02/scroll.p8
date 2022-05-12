@@ -13,27 +13,40 @@ _ctrl={
   srnd=true,
 }
 
+mxmax = 20
+
 _wrld={
   wx=0,
   wy=0,
   state=nil,
   init=function(self)
-    for x=0,25 do
+    for x=0,mxmax do
       mset(x,0,129) -- 129, 130 brick wall
       mset(x,15,129) -- 129, 130 brick wall
     end
     mset(0,0,131) -- 131 green door -- 132 red door
-    mset(25,0,132)
+    mset(mxmax,0,132)
     mset(0,15,132) 
-    mset(25,15,131)
+    mset(mxmax,15,131)
     self.state=self.update 
   end,
   update=function(self)
   end,
   draw=function(self)
-    map(0, 0, self.wx,self.wy,16,16)
-    -- need to add the second draw
+    local mx=flr(self.wx/8)
+    local sx= -(self.wx % 8)
+    local mw=min(17,mxmax-mx+1)
+    map(mx, 0, sx,self.wy,mw,16)
+    print ('mx='..mx..' sx='..sx..' wx='..self.wx, 0, 50)
+
+    if mw<17 then
+      sx=sx+mw*8
+      mx=0
+      mw = 17-mw
+      map(mx, 0, sx,self.wy,mw,16)
+    end
   end,
+  -- doesn't draw the full width for the second half
 }
 
 -- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
@@ -48,14 +61,18 @@ function _init() --iiiiiii
   _wrld:init()
 end
 
+
+delta_step = 3
+
 function _update() --uuuuuuuu
 
   if btnp(0) then
-    printh("Btn 0 left")
+    --printh("Btn 0 left")
+    _wrld.wx = (_wrld.wx - delta_step + (mxmax*8))%(mxmax*8)
 
   elseif btnp(1) then
     -- printh("Btn 1 right")
-    _wrld.wx -= 1
+    _wrld.wx = (_wrld.wx + delta_step + (mxmax*8))%(mxmax*8)
 
   elseif btnp(2) then 
     printh("Btn 2 up")
