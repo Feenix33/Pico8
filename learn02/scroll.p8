@@ -3,6 +3,8 @@ version 34
 __lua__
 --[[
 base02.p8 from maze project
+convert update to use ww
+at max there is a jump
 --
 ]]--
 -- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
@@ -13,13 +15,16 @@ _ctrl={
   srnd=true,
 }
 
-mxmax = 20
+mxmax = 50
 
 _wrld={
-  wx=0,
-  wy=0,
   state=nil,
+  wx=0, -- world pos offset
+  wy=0,
+  vx=0, -- velocity
+  ww=0, -- world width
   init=function(self)
+    self.ww=mxmax*8
     for x=0,mxmax do
       mset(x,0,129) -- 129, 130 brick wall
       mset(x,15,129) -- 129, 130 brick wall
@@ -28,6 +33,10 @@ _wrld={
     mset(mxmax,0,132)
     mset(0,15,132) 
     mset(mxmax,15,131)
+    for x=0,8 do
+      mset(irand0(mxmax),0,130+irand(5))
+      mset(irand0(mxmax),15,130+irand(5))
+    end
     self.state=self.update 
   end,
   update=function(self)
@@ -37,7 +46,7 @@ _wrld={
     local sx= -(self.wx % 8)
     local mw=min(17,mxmax-mx+1)
     map(mx, 0, sx,self.wy,mw,16)
-    print ('mx='..mx..' sx='..sx..' wx='..self.wx, 0, 50)
+    print ('mx='..mx..' sx='..sx..' wx='..self.wx..' vx='..self.vx, 0, 50)
 
     if mw<17 then
       sx=sx+mw*8
@@ -46,7 +55,6 @@ _wrld={
       map(mx, 0, sx,self.wy,mw,16)
     end
   end,
-  -- doesn't draw the full width for the second half
 }
 
 -- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
@@ -62,7 +70,7 @@ function _init() --iiiiiii
 end
 
 
-delta_step = 3
+delta_step = 1
 
 function _update() --uuuuuuuu
 
@@ -75,10 +83,12 @@ function _update() --uuuuuuuu
     _wrld.wx = (_wrld.wx + delta_step + (mxmax*8))%(mxmax*8)
 
   elseif btnp(2) then 
-    printh("Btn 2 up")
+    -- printh("Btn 2 up")
+    _wrld.vx += 1
 
   elseif btnp(3) then
-    printh("Btn 3 down")
+    --printh("Btn 3 down")
+    _wrld.vx -= 1
 
   elseif btnp(4) then
     -- printh("Btn 4 = cvz")
@@ -86,8 +96,11 @@ function _update() --uuuuuuuu
 
   elseif btnp(5) then
     printh("Btn 5 = nm")
+    printh(_wrld.ww)
     _ctrl.grid = not _ctrl.grid
   end
+
+  _wrld.wx = (_wrld.wx + _wrld.vx + _wrld.ww) % _wrld.ww
 
 end
 
