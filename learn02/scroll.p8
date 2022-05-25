@@ -11,11 +11,11 @@ at max there is a jump
 _ctrl={ 
 -- control
   pname='scroll 01',
-  start_msg=true,
+  start_msg=false,
   srnd=true,
 }
 
-mxmax = 50
+mxmax = 31
 
 _wrld={
   state=nil,
@@ -25,6 +25,16 @@ _wrld={
   ww=0, -- world width
   init=function(self)
     self.ww=mxmax*8
+
+    --[[
+    for x=0,mxmax-1 do
+      mset(x,0,16+16+(x%16))
+      mset(x,15,16+(x%16))
+      --mset(x,0,16+(x%16))
+      --mset(x,15,16+(x%16))
+    end
+    ]]--
+
     for x=0,mxmax do
       mset(x,0,129) -- 129, 130 brick wall
       mset(x,15,129) -- 129, 130 brick wall
@@ -37,6 +47,7 @@ _wrld={
       mset(irand0(mxmax),0,130+irand(5))
       mset(irand0(mxmax),15,130+irand(5))
     end
+
     self.state=self.update 
   end,
   update=function(self)
@@ -44,16 +55,26 @@ _wrld={
   draw=function(self)
     local mx=flr(self.wx/8)
     local sx= -(self.wx % 8)
-    local mw=min(17,mxmax-mx+1)
-    map(mx, 0, sx,self.wy,mw,16)
-    print ('mx='..mx..' sx='..sx..' wx='..self.wx..' vx='..self.vx, 0, 50)
+    local mw=min(16,mxmax-mx)
+    local mw1=mxmax-mx
+    map(mx, 0, sx,self.wy,mw+1,16)
+    print ('mx='..mx..' sx='..sx..' wx='..self.wx..' vx='..self.vx..' mw='..mw, 0, 50)
 
-    if mw<17 then
-      sx=sx+mw*8
+     -- screen is 128 x 128
+     -- need to put the if draw back in 
+    local dbgoff=4
+    if mw1<17 then
+      sx=sx+(mw)*8
       mx=0
       mw = 17-mw
-      map(mx, 0, sx,self.wy,mw,16)
+      map(mx, 0, sx,self.wy, mw,16)
+      dbgoff=0
     end
+    print ('mx='..mx..' sx='..sx..' wx='..self.wx..' vx='..self.vx..' mw='..mw, dbgoff, 58)
+
+    -- draw the map
+    map (0,0, 0,80, 16,1)
+    map (16,0, 0,90, 16,1)
   end,
 }
 
@@ -76,11 +97,11 @@ function _update() --uuuuuuuu
 
   if btnp(0) then
     --printh("Btn 0 left")
-    _wrld.wx = (_wrld.wx - delta_step + (mxmax*8))%(mxmax*8)
+    _wrld.wx = (_wrld.wx - delta_step + _wrld.ww)%_wrld.ww
 
   elseif btnp(1) then
     -- printh("Btn 1 right")
-    _wrld.wx = (_wrld.wx + delta_step + (mxmax*8))%(mxmax*8)
+    _wrld.wx = (_wrld.wx + delta_step + _wrld.ww)%_wrld.ww
 
   elseif btnp(2) then 
     -- printh("Btn 2 up")
@@ -136,14 +157,14 @@ __gfx__
 00900900000009000090000000000900000009000000090000900900000009000090090000000900090900900009009009090000090000900900009009000090
 00999900000009000099990000999900000009000099990000999900000009000099990000999900090999900009009009099990090999900900009009099990
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
-00000000111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
-00000000111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
-00000000111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
-00000000111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
-00000000111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
-00000000111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
-00000000111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
+55555555111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
+50000005111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
+50000005111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
+50055005111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
+50055005111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
+50000005111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
+50555505111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
+55000055111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
 00000000111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
 00000000111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
 00000000111111112222222233333333444444445555555566666666777777778888888899999999aaaaaaaabbbbbbbbccccccccddddddddeeeeeeeeffffffff
