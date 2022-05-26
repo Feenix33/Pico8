@@ -2,10 +2,11 @@ pico-8 cartridge // http://www.pico-8.com
 version 34
 __lua__
 --[[
-base02.p8 from maze project
-convert update to use ww
-at max there is a jump
---
+scroll series - build a crappy side scroller
+  01 - scrolling w/random map
+  02 - add a person who moves independent of scrolling
+  
+  screen is 128 x 128
 ]]--
 -- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
 _ctrl={ 
@@ -23,18 +24,54 @@ _wrld={
   wy=0,
   vx=0, -- velocity
   ww=0, -- world width
+  px=64, -- player x,y
+  py=64,
+  ps=152, -- plyr sprite
   init=function(self)
     self.ww=mxmax*8
 
-    --[[
-    for x=0,mxmax-1 do
-      mset(x,0,16+16+(x%16))
-      mset(x,15,16+(x%16))
-      --mset(x,0,16+(x%16))
-      --mset(x,15,16+(x%16))
-    end
-    ]]--
+    --self.world_dbg()
+    --self.world_wall()
+    self.world_pipe()
 
+    self.state=self.update 
+  end,
+  update=function(self)
+  end,
+  draw_player=function(self)
+    -- sprite 152&153
+    spr(self.ps,self.px,self.px,1,1)
+    --spr(152,64,64,1,1)
+    if self.ps == 152 then self.ps = 153 else self.ps = 152 end
+  end,
+  draw=function(self)
+    local mx=flr(self.wx/8)
+    local sx= -(self.wx % 8)
+    local mw=min(16,mxmax-mx)
+    local mw1=mxmax-mx
+    map(mx, 0, sx,self.wy,mw+1,16)
+
+    if mw1<17 then
+      sx=sx+(mw)*8
+      mx=0
+      mw = 17-mw
+      map(mx, 0, sx,self.wy, mw,16)
+    end
+
+    self:draw_player()
+  end,
+  world_pipe=function(self) -- build a pipe world
+    -- uses sprites [187-191]
+    for x=0,mxmax do
+      for y=0,irand0(3) do
+        mset(x,y,187)
+      end
+      for y=0,irand0(3) do
+        mset(x,15-y,191)
+      end
+    end
+  end,
+  world_wall=function(self) -- build a wall world
     for x=0,mxmax do
       mset(x,0,129) -- 129, 130 brick wall
       mset(x,15,129) -- 129, 130 brick wall
@@ -47,34 +84,14 @@ _wrld={
       mset(irand0(mxmax),0,130+irand(5))
       mset(irand0(mxmax),15,130+irand(5))
     end
-
-    self.state=self.update 
   end,
-  update=function(self)
-  end,
-  draw=function(self)
-    local mx=flr(self.wx/8)
-    local sx= -(self.wx % 8)
-    local mw=min(16,mxmax-mx)
-    local mw1=mxmax-mx
-    map(mx, 0, sx,self.wy,mw+1,16)
-    print ('mx='..mx..' sx='..sx..' wx='..self.wx..' vx='..self.vx..' mw='..mw, 0, 50)
-
-     -- screen is 128 x 128
-     -- need to put the if draw back in 
-    local dbgoff=4
-    if mw1<17 then
-      sx=sx+(mw)*8
-      mx=0
-      mw = 17-mw
-      map(mx, 0, sx,self.wy, mw,16)
-      dbgoff=0
+  world_dbg=function(self) -- build debug world
+    for x=0,mxmax-1 do
+      mset(x,0,16+16+(x%16))
+      mset(x,15,16+(x%16))
+      --mset(x,0,16+(x%16))
+      --mset(x,15,16+(x%16))
     end
-    print ('mx='..mx..' sx='..sx..' wx='..self.wx..' vx='..self.vx..' mw='..mw, dbgoff, 58)
-
-    -- draw the map
-    map (0,0, 0,80, 16,1)
-    map (16,0, 0,90, 16,1)
   end,
 }
 
